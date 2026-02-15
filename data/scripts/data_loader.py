@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from fredapi import Fred
 from dotenv import load_dotenv
 from pathlib import Path
-
+import yfinance as yahooFinance
 
 class BaseDataLoader(ABC):
     """
