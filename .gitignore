@@ -1,0 +1,28 @@
+# --- Python Internals ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# --- Environments ---
+.env
+**/*.env
+.venv
+**/*.venv
+env/
+venv/
+ENV/
+
+# --- Operating System Junk ---
+.DS_Store
+Thumbs.db
+
+# --- Editor / IDE Settings ---
+.vscode/
+.idea/
+
+# --- Exceptions (if we need a proper config file) ---
+!config.csv

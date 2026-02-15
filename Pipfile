@@ -11,10 +11,11 @@ scipy = "*"
 statsmodels="*"
 seaborn="*"
 scikit-learn="*"
+fredapi = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"
 
 [requires]
-python_version = ">=3.10"
-
+#python_version = ">=3.10"
