@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from fredapi import Fred
 from dotenv import load_dotenv
 from pathlib import Path
-import yfinance as yahooFinance
+import yfinance as yf
+
 
 class BaseDataLoader(ABC):
     """
@@ -118,6 +119,31 @@ class FredDataLoader:
         return macro_data.dropna()
 
 
+# EXAMPLE FUNCTION FOR YFINANCE
+def yfinance_get_ticker_data(
+    ticker: str, start_date: str = "2000-01-01"
+) -> pd.DataFrame:
+    """
+    Uses yfinance to fetch historical stock data.
+    Some ticker codes can be unusual for yfinance (check on the website)
+    """
+    try:
+        print(f"Downloading data for {ticker}...")
+        df = yf.download(ticker, start=start_date, auto_adjust=True, progress=False)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        if df.empty:
+            raise ValueError("Empty DataFrame returned.")
+        return df
+    except Exception as e:
+        print(f"Failed to fetch data: {e}")
+        return pd.DataFrame()
+
+
+# yfinance also supports a lot of other commands (e.g. Ticker, Market, Sector...)
+# The full list is here: https://ranaroussi.github.io/yfinance/reference/index.html
+
+
 # TEST STUFF
 if __name__ == "__main__":
     # Might need to wrap this whole section in a function for analysis team
@@ -135,3 +161,8 @@ if __name__ == "__main__":
     df_macro = loader.load_basic_regime_dataset()
     print("\n--------- Aligned Macro Data ---------")
     print(df_macro.tail())
+
+    # Test yfinance ticker data retrieval
+    print("\n --------- AAPL ticker data ---------")
+    df = yfinance_get_ticker_data("AAPL", start_date="2023-01-01")
+    print(df.head())
