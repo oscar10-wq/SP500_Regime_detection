@@ -4,19 +4,22 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-numpy = "*"
-pandas = "*"
-matplotlib = "*"
-scipy = "*"
+numpy="*"
+pandas="*"
+matplotlib="*"
+scipy="*"
 statsmodels="*"
 seaborn="*"
 scikit-learn="*"
-fredapi = "*"
-python-dotenv = "*"
-yfinance = "*"
+fredapi="*"
+python-dotenv="*"
+yfinance="*"
+pandas-ta-classic="*"
+certifi="*"
 
 [dev-packages]
-pytest = "*"
+pytest="*"
+ipykernel="*"
 
 [requires]
-#python_version = ">=3.10"
+#python_version=">=3.10"
