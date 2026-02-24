@@ -36,7 +36,7 @@ COMP0047_4 Joseph Martin joseph.martin.25@ucl.ac.uk
 
 ## Analysis : 
 - Helen
-- Tap
+- Tep
 - Caelen
 - Dominic
 - Joseph
