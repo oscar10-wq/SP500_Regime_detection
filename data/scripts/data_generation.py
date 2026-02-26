@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 custom_context = ssl.create_default_context(cafile=certifi.where())
 load_dotenv()
-api_key = os.getenv("0d472975ba8d0e5ee549648673b1e3de")
+api_key = os.getenv("YOUR_FRED_API_KEY")
 
 
 def get_yahoo_finance_data(start_date: str, end_date: str) -> pd.DataFrame:
