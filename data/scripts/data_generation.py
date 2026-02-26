@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 custom_context = ssl.create_default_context(cafile=certifi.where())
 load_dotenv()
-api_key = os.getenv("FRED_API_KEY")
+api_key = os.getenv("0d472975ba8d0e5ee549648673b1e3de")
 
 
 def get_yahoo_finance_data(start_date: str, end_date: str) -> pd.DataFrame:
@@ -115,42 +115,37 @@ def get_fred_input_data(
     return fred_inputs
 
 
-def classify_regimes(feature_set: pd.DataFrame, column: str = "SPX_Close") -> pd.Series:
-    """Labels regimes as 1 (Bull) or 0 (Bear) based on 20% thresholds.
+
+def get_futures_data(start_date: str, end_date: str) -> pd.DataFrame:
+    """Gets interest rate futures data (Fed Funds and 10Y Treasury).
+
     Args:
-        feature_set (pd.DataFrame): set of features
-        column (str, optional): column to use. Defaults to "SPX_Close".
+        start_date (str): start date (YYYY-MM-DD)
+        end_date (str): end date (YYYY-MM-DD)
 
     Returns:
-        pd.Series: regimes
+        pd.DataFrame: futures data (Close prices)
     """
-    prices = feature_set[column]
-    regime = pd.Series(index=feature_set.index, dtype=int)
+    # Define tickers: ZQ=F (Fed Funds), ZN=F (10Y Note)
+    tickers = {"Fed_Funds_Future": "ZQ=F", "10Y_Treasury_Future": "ZN=F"}
+    
+    # Fetch data
+    raw_futures = yf.download(
+        list(tickers.values()), 
+        start=start_date, 
+        end=end_date, 
+        interval="1mo", 
+        progress=False
+    )
 
-    # Initialize with the first state (assuming Bull for start of 2000)
-    current_regime = 1
-    last_peak = prices.iloc[0]
-    last_trough = prices.iloc[0]
+    # Clean multi-index columns if necessary
+    futures_data = pd.DataFrame(index=raw_futures.index)
+    for name, ticker in tickers.items():
+        if ticker in raw_futures['Close'].columns:
+            futures_data[name] = raw_futures['Close'][ticker]
+            
+    # Ensure monthly alignment (MS = Month Start) to match FRED data
+    futures_data.index = futures_data.index.to_period('M').to_timestamp()
+    
+    return futures_data
 
-    for i in range(len(prices)):
-        price = prices.iloc[i]
-
-        if current_regime == 1:  # In a Bull market
-            if price > last_peak:
-                last_peak = price
-            # If price drops 20% from the peak, it's now a Bear market
-            if price <= last_peak * 0.80:
-                current_regime = 0
-                last_trough = price
-
-        else:  # In a Bear market
-            if price < last_trough:
-                last_trough = price
-            # If price rises 20% from the trough, it's now a Bull market
-            if price >= last_trough * 1.20:
-                current_regime = 1
-                last_peak = price
-
-        regime.iloc[i] = current_regime
-
-    return regime
