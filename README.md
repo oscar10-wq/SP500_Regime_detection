@@ -21,7 +21,7 @@ Note: Users will need to pull your changes and run pipenv sync for it to carry o
 COMP0047_4 Yu Xiao yu.xiao.24@ucl.ac.uk
 COMP0047_4 Helen Chen helen.chen.25@ucl.ac.uk
 COMP0047_4 Tania Essombe Kuoh tania.kuoh.25@ucl.ac.uk
-COMP0047_4 Weeraya Hew weeraya.hew.25@ucl.ac.uk (don't know) 
+COMP0047_4 Weeraya Hew weeraya.hew.25@ucl.ac.uk
 COMP0047_4 Tep San tep.san.25@ucl.ac.uk
 COMP0047_4 Caelen Brown caelen.brown.25@ucl.ac.uk
 COMP0047_4 Oscar Peyron oscar.peyron.25@ucl.ac.uk
@@ -33,6 +33,7 @@ COMP0047_4 Joseph Martin joseph.martin.25@ucl.ac.uk
 - Yu
 - Dominic
 - Joseph
+- Weeraya
 
 ## Analysis : 
 - Helen
@@ -40,6 +41,7 @@ COMP0047_4 Joseph Martin joseph.martin.25@ucl.ac.uk
 - Caelen
 - Dominic
 - Joseph
+- Weeraya
 
 ## Data : 
 - Tania
