@@ -1,6 +1,7 @@
 start with correlation heat map
 
 Analaysis Features:
+
 SPX_Close
   S&P 500 index level representing aggregate US large-cap equity prices and forward expectations of growth and earnings.
   High levels → strong expected economic growth and earnings outlook.
