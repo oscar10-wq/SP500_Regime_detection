@@ -127,7 +127,7 @@ def get_futures_data(start_date: str, end_date: str) -> pd.DataFrame:
         pd.DataFrame: futures data (Close prices)
     """
     # Define tickers: ZQ=F (Fed Funds), ZN=F (10Y Note)
-    tickers = {"Fed_Funds_Future": "ZQ=F", "10Y_Treasury_Future": "ZN=F"}
+    tickers = {"Fed_Funds_Future": "ZQ=F", "10Y_Treasury_Future": "ZN=F"} # other ticker : 
     
     # Fetch data
     raw_futures = yf.download(
