@@ -7,7 +7,9 @@ import pandas as pd
 from fredapi import Fred
 import os
 from dotenv import load_dotenv
-
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def identify_hike_cycles(fed_funds_df: pd.DataFrame, window: int = 3):
     """
@@ -15,7 +17,7 @@ def identify_hike_cycles(fed_funds_df: pd.DataFrame, window: int = 3):
     Returns a boolean series where True = "Tightening/Hike Cycle".
     """
     # Calculate the change in rates
-    diff = fed_funds_df.diff()
+    diff = fed_funds_df
     
     # A 'Hike' is defined here as a positive change in the Fed Funds Rate
     is_hike = diff > 0
@@ -26,23 +28,37 @@ def identify_hike_cycles(fed_funds_df: pd.DataFrame, window: int = 3):
     return hike_regime
 
 
-def calculate_regime_lag(price_df: pd.DataFrame, rates_df: pd.DataFrame, lags=[30, 90, 180]):
-    """
-    Calculates the correlation between rate changes and future market returns.
-    Helps determine the 'Lead Time' of a Fed trigger.
-    """
+def calculate_feature_lagged_correlation(target_df, features_df, lags=[1, 6, 12]):
     results = {}
-    returns = price_df.pct_change()
-    rate_changes = rates_df.diff()
-
+    
     for lag in lags:
-        # Shift returns backwards to see how today's rate change affects future returns
-        future_returns = returns.shift(-lag)
-        correlation = rate_changes.corr(future_returns) 
-        results[f"{lag}_day_lag_corr"] = correlation
+        correlationlist = [] 
+        # Shift the target once per lag
+        future_target = target_df.shift(-lag)
+        
+        for col in features_df.columns:
+            # Calculate correlation between feature and shifted target
+            corr_value = features_df[col].corr(future_target)
+            correlationlist.append(corr_value)
+            
+        # Now both have the exact same length (number of columns)
+        results[lag] = pd.DataFrame({
+            "Feature": features_df.columns,
+            "Correlation": correlationlist
+        }).sort_values(by="Correlation", key=abs, ascending=False).reset_index(drop=True)
         
     return results
 
+def plot_correlation_ranking(results):
+
+    fig, ax = plt.subplots(len(results), 1, figsize=(12, 6 * len(results)))
+    for i, (lag, df) in enumerate(results.items()):
+        sns.barplot(x="Correlation", y="Feature", data=df.head(20), palette="viridis", ax=ax[i])
+        ax[i].set_title(f"Top 20 Feature Correlations with SPX_Close at Lag {lag} Months")
+        ax[i].set_xlabel("Correlation Coefficient")
+        ax[i].set_ylabel("Feature")
+    plt.tight_layout()
+    plt.show()
 
 def classify_regimes(feature_set: pd.DataFrame, column: str = "SPX_Close") -> pd.Series:
     """Labels regimes as 1 (Bull) or 0 (Bear) based on 20% thresholds.
