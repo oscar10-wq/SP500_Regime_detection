@@ -1,34 +1,43 @@
-Week 1
-  Part 1 of learning what regimes are bull/bear
-  
-      Academic paper by John M.Maheu
-      https://www.jstor.org/stable/pdf/1392140.pdf?refreqid=fastly-default%3A96fc458412821fcb4d37bed683fb59ae&ab_segments=&initiator=&acceptTC=1
-      	- Defines 2 state HMM
-      		○ Bull market 
-      			§ Features high average returns
-      			§ Low volatility
-      			§ Probability of remaining in the bull state increases with duration
-      		○ Bear market
-      			§ Low negative average returns
-      			§ High vol
-      			§ Also persistent
-      	- Their research based on non constant transition probabilities
-      		○ Probabilities depended on the number of consecutive months in a state
-      		○ Also allowed duration to affect conditional mean and variance
-      
-      	- Potential model pipeline
-      		○ Create simple 2 state HMM
-      			§ Use a student T distribution (data science powerpoint suggests this models returns more accurately)
-      			§ Hence 2 states with student t emissions
-      			§ Constant transition probabilities at the start
-      			§ Parameters: (initial probabilities of each regime, transition matrix, 2 student T distribution parameters)
-      				□ Student t params- mean, scale, degrees of freedom
-      			§ Estimate through maximum likelihood?
-      			§ Then look at state parameters to work out bear v bull
-      				□ Based on paper higher mean, lower vol = bull
-      		○ After simple HMM has been implemented can build in varying transition probabilities etc
-      
-      	
-      Estimating through maximum likelihood
-      Can be done manually or through hmmlearn.fit
-      - not sure if built in libraries are frowned upon but .fit be way easier
+Granger Causality
+- Linear dependence test between several fed metrics and the state of the current economic regime
+- Fed Variables
+	- Fed_Cycle
+		- Persistent direction of the last Fed move (+1 for a hike, -1 for a cut)
+	- Fed_change
+		- current change in Fed Funds rate (zero at non fed meeting months)
+	- Fed_Funds_Rate
+		- level of policy rate
+	- 10Y2Y_Spread
+		- yield curve metric
+
+- we condition this causality test on 3 other metrics (SPX_Return, VIX_Close, SPX_RSI)
+	- want to try to isolate the effects of the fed, these metrics performed well on the logistic regression tests earlier
+- also test on several different lags to see how this effects it
+	- tests whether lagged Fed terms significantly reduce prediction error
+	- linear style probability test which is a drawback of the method
+- test metrics
+	- test F statistic based on difference of RSS
+	- test p values where null hypothesis is that all lagged coefficients are zero
+		- hence if we reject null the lagge cause vairable adds predictive power
+	- also investigate R^2 statistic
+		- how much explained variation is gained by adding cause variable
+- correction
+	- we test 4 causes with 5 different lag choices so naturally some p values will appear by chance
+	- add a correction to this - BH correction
+		- a less strict correction than Bonferroni 
+			- instead of limtiting any false postiives it allows some but limits the number
+		- if we did bonferroni at 5% significance
+			- 0.05/20 = 0.0025 , almost nothing would be considered significant
+
+Results
+- most of the Fed Variables do not Granger cause regimes once we control for other variables
+	- Fed_Change and Fed_Funds_rate do fall below p value threshold at a 12 month lag 
+	- implies markets may respond to the cumulative direction of polcy over time
+	- none pass the F statistic threshold implying no significance
+	- from the R^2 statistic we can see there is predictive improvement as lag increases however highest it gets to is 2.5% 
+
+Limitations of analysis
+- had to account for some control variables coul not account for all so could be some influence of other variables
+- assumption of linear relationship between it, in real life this may not be the case
+	- no ability to detect non linear relationships
+

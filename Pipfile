@@ -16,6 +16,7 @@ python-dotenv="*"
 yfinance="*"
 pandas-ta-classic="*"
 certifi="*"
+hmmlearn = "*"
 
 [dev-packages]
 pytest="*"
