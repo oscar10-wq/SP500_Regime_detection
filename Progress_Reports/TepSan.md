@@ -58,5 +58,30 @@
 
 > **One-liner for the presentation:** *"Markets predict their own regime switches through momentum and volatility signals. Fed rate hikes are a symptom of the economic cycle, not the trigger for bear markets."*
 
-### Conclusion
+### Conclusion (Initial)
 The answer to the research question is **nuanced**: Fed Funds Rate is a contributing factor to regime identification, but it is not the primary trigger. The market's own momentum signals (RSI, ROC) and volatility (VIX) are stronger predictors of when the S&P 500 transitions between bull and bear regimes.
+
+***
+
+# Week 2: Advanced Feature Engineering & L1 Pruning
+
+### Methodology
+- Engineered new features including 3-month and 6-month **Lags** (time-delays) and **Deltas** (momentum/rate of change) for macroeconomic variables and the Fed Funds Rate.
+- Applied **L1 Regularization (Lasso via Logistic Regression)** to prune weak features.
+- Retrained Random Forest and Gradient Boosting models on the pruned dataset.
+
+### Results
+- **Feature Pruning**: Reduced the feature set from 23 to 11 key features (eliminating 12).
+- **Model Accuracy (Pruned dataset)**:
+  - Random Forest: 78.85%
+  - Gradient Boosting: 84.62%
+  
+#### Surviving Fed Rate Features
+Only two engineered Fed Funds Rate features survived the L1 penalty:
+1. **Fed_Funds_Rate_Lag3M** (Avg Rank: 6.3 / 11) - Strong predictor in Gradient Boosting (#3).
+2. **Fed_Funds_Rate_Delta6M** (Avg Rank: 6.3 / 11) - Strong predictor in Random Forest (#3) and Logistic Regression (#5).
+
+### Key Findings & Discussion
+1. **Time and Momentum Matter:** The raw Fed Funds Rate is a relatively weak predictor, but the **6-month rate of change (Delta)** and the **3-month delayed effect (Lag)** are significantly more predictive of regime shifts. 
+2. **Model Differences:** Random Forest and Logistic Regression prioritize the *momentum* of rate changes (Delta6M), whereas Gradient Boosting finds better signal in the *absolute level* of rates from 3 months prior (Lag3M).
+3. **Updated Conclusion:** While it generally does not beat market momentum (RSI, ROC) in terms of pure predictive power, the Fed Funds Rate is indeed an important driver of market regimes **if the data is structurally engineered** to account for time-delays and the momentum of rate hikes/cuts.

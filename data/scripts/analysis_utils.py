@@ -53,7 +53,7 @@ def plot_correlation_ranking(results):
 
     fig, ax = plt.subplots(len(results), 1, figsize=(12, 6 * len(results)))
     for i, (lag, df) in enumerate(results.items()):
-        sns.barplot(x="Correlation", y="Feature", data=df.head(20), palette="viridis", ax=ax[i])
+        sns.barplot(x="Correlation", y="Feature", data=df.head(20), hue="Feature", palette="viridis", ax=ax[i], legend=False)
         ax[i].set_title(f"Top 20 Feature Correlations with SPX_Close at Lag {lag} Months")
         ax[i].set_xlabel("Correlation Coefficient")
         ax[i].set_ylabel("Feature")
