@@ -1,11 +1,11 @@
-# [2026-03-12] Timing Analysis
-## Event Study & Lead-Lag Cross-Correlation Analysis
+## [2026-03-12] Timing Analysis
+### Event Study & Lead-Lag Cross-Correlation Analysis
 **Script:** `analysis/Event Study/event_study.py`
 **Outputs:** `analysis/Event Study/outputs/`
 
 - Enhance the existing Feature Importance and Granger Causality analyses by telling *when* in addition to *whether* Fed rate variables predict regimes (i.e., does the market fall before or after a hike?) This analysis directly tests the **causal timing** of the relationship to address the core research question.
 
-## 1. Event Study
+### 1. Event Study
 
 - Identified all **hike cycle starts** from 2000–2025 — defined as the first rate hike after at least 3 consecutive months with no hike. This avoids counting every individual hike within a cycle and focuses on the structural start of tightening.
 - Found **23 hike cycle starts** across the dataset.
@@ -13,9 +13,9 @@
 - Computed **cumulative log-returns** anchored to 0 at t = 0 for each episode.
 - Computed the **bear market frequency** (% of episodes in a bear regime) at each window point.
 
-### Results
+#### Results
 
-#### Bear Market Frequency: Pre vs. Post Hike
+##### Bear Market Frequency: Pre vs. Post Hike
 
 | Window | Bear Market Frequency |
 |---|---|
@@ -24,7 +24,7 @@
 | Post-hike 1–12 months | 18.5% |
 | Post-hike 13–24 months | 11.2% |
 
-#### Key Findings
+##### Key Findings
 
 1. **Bear market frequency falls after hikes start, not rises.** The post-hike period (18.5% and 11.2%) is consistently less bearish than the pre-hike period (23.6%). This is the opposite of what the "hikes trigger bear markets" hypothesis predicts.
 
@@ -36,7 +36,7 @@
 
 ---
 
-## 2. Lead-Lag Cross-Correlation
+### 2. Lead-Lag Cross-Correlation
 
 For each Fed variable and lag L ∈ [−24, +24] months, computed:
 
@@ -52,7 +52,7 @@ Three Fed variables tested:
 
 95% significance threshold: ±0.11 (n ≈ 300 observations)
 
-### Results
+#### Results
 
 | Variable | Peak Lag | Peak r | Interpretation |
 |---|---|---|---|
@@ -60,7 +60,7 @@ Three Fed variables tested:
 | Fed_Change (monthly change) | +13 months | −0.28 | Rate increases associated with fewer bear markets 13m later |
 | Fed_Cycle (direction) | +7 months | −0.42 | Hiking cycles strongly co-occur with bull markets |
 
-#### Key Findings
+##### Key Findings
 
 1. **Fed rate level peaks at lag +22m (r = 0.40).** High rate levels are associated with bear markets arriving roughly 2 years later. This supports a *cumulative tightening* effect — not a sharp trigger. Importantly, the contemporaneous correlation at lag 0 is near zero (~0.05), meaning high rates and bear markets do not coincide right now.
 
@@ -72,7 +72,7 @@ Three Fed variables tested:
 
 ---
 
-## Overall Conclusion
+### Overall Conclusion
 
 Both analyses converge on the same finding:
 
@@ -80,7 +80,7 @@ Both analyses converge on the same finding:
 
 This directly supports and strengthens the findings from Feature Importance (Fed rate ranked #7.7/12 average) and Granger Causality (Fed variables do not independently Granger-cause regimes after controlling for market signals).
 
-### Limitations
+#### Limitations
 
 - **23 hike cycles is a small sample** — some results (especially the event study averages) are sensitive to individual episodes like 2007–2008 and 2022.
 - **Cross-correlation is not causation** — it measures linear co-movement at different lags, but does not control for confounders (same limitation as basic Granger, partially addressed by the conditional Granger analysis).
