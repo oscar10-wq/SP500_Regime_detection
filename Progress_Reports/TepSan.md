@@ -85,3 +85,31 @@ Only two engineered Fed Funds Rate features survived the L1 penalty:
 1. **Time and Momentum Matter:** The raw Fed Funds Rate is a relatively weak predictor, but the **6-month rate of change (Delta)** and the **3-month delayed effect (Lag)** are significantly more predictive of regime shifts. 
 2. **Model Differences:** Random Forest and Logistic Regression prioritize the *momentum* of rate changes (Delta6M), whereas Gradient Boosting finds better signal in the *absolute level* of rates from 3 months prior (Lag3M).
 3. **Updated Conclusion:** While it generally does not beat market momentum (RSI, ROC) in terms of pure predictive power, the Fed Funds Rate is indeed an important driver of market regimes **if the data is structurally engineered** to account for time-delays and the momentum of rate hikes/cuts.
+
+***
+
+# Week 3: Slide Presentation
+
+### What Was Done
+- Created the **14-slide presentation** (`SP500_Regime_Detection_Presentation.pptx`) using the UCL Purple Vibrant template.
+- Structured the deck to mirror the `project.ipynb` notebook flow: Research Question → Data → EDA → Modelling → Feature Importance → Lags & Deltas → Granger Causality → Event Study → Network Analysis → Conclusion.
+- Embedded **7 analysis figures** directly into slides (correlation heatmap, RF feature importance, LR coefficients, L1 pruning, Granger causality, event study, ego network).
+- Extracted inline figures from the Jupyter notebook for use in the presentation.
+- Wrote **full speaking scripts** in the speaker notes for each slide, timed to fit within a **15-minute presentation** (~1,854 words at 130 wpm = 14.3 min).
+- Included **prepared Q&A answers** in the final slide's speaker notes.
+
+### Presentation Outline (14 slides)
+1. Title
+2. Research Question & Regime Definitions
+3. Data Overview (12 features × 312 months)
+4. Correlation Heatmap
+5. Three Classification Models
+6. Random Forest Feature Importance
+7. Cross-Model Consensus (Fed Rate #7.7/12)
+8. Digging Deeper: Lags & Deltas (L1 pruning)
+9. Granger Causality (≤2.5% added variance)
+10. Event Study (bear frequency falls after hikes)
+11. Network Analysis (Fed = most isolated node)
+12. Conclusion: Fed is NOT the main trigger
+13. Limitations & Future Work
+14. Thank You / Q&A
