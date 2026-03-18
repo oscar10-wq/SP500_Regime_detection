@@ -1,7 +1,7 @@
 # PPT Outline
 ## Presentation Notes
-Total presentation time: 10 minutes
-Estimated speaking time per slide: 1–2 minutes
+Total presentation time: 10 minutes  
+Estimated speaking time per slide: 1–2 minutes  
 Expected number of content slides (excluding the table of contents and section cover slides): 8–12 slides
 
 ## 1. Project Background
@@ -56,8 +56,7 @@ Include:
 
 ## 5. Conclusion and Limitations
 This section answers:
-**What are the conclusions, and what are the limitations of our study?**
-
+**What are the conclusions, and what are the limitations of our study?**  
 conclusions:
 
 limitations:
