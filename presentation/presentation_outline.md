@@ -5,14 +5,16 @@ Estimated speaking time per slide: 1–2 minutes
 Expected number of content slides (excluding the table of contents and section cover slides): 8–12 slides
 
 ## 1. Project Background
-This section answers:
+This section answers:  
 **Why are we studying this problem, and what is the overall project about?**
 
 ## 2. Data Preparation
-This section answers:
+This section answers:  
 **How do we transform raw data into an analysable dataset?**
-structure:
+
+structure:  
 **Methodology + Why this method + outcome**
+
 Include:
 - Data sources: Yahoo Finance, FRED, futures data
 - Monthly frequency alignment
@@ -23,10 +25,12 @@ Include:
 - Lag and delta feature engineering
 
 ## 3. Analysis I: Relationship and Causality Checks
-This section answers:
-**Is there a relationship between Fed variables and market regimes? If so, what does that relationship look like, and who leads whom?**
-structure:
-**Whitch model? + Why this model? + Methodology + outcome**
+This section answers:  
+**Is there a relationship between Fed variables and market regimes? If so, what does that relationship look like, and who leads whom?** 
+
+structure:  
+**Whitch model? + Why this model? + Methodology + outcome**  
+
 Include:
 - EDA / correlation heatmap
 - Lagged correlation analysis
@@ -42,10 +46,12 @@ These methods mainly focus on:
 - comparing market behaviour before and after events
 
 ## 4. Analysis II: Predictive Modelling
-This section answers:
+This section answers:  
 **If regime is treated as a classification target, which variables are most predictive of it? How strong is the predictive power of Fed-related variables?**
-structure:
+
+structure:  
 **Whitch model? + Why this model? + Methodology + outcome**
+
 Include:
 - Feature importance classification
 - Monthly resampling with lag/delta feature engineering
@@ -55,8 +61,9 @@ Include:
 - Re-modelling after L1 pruning
 
 ## 5. Conclusion and Limitations
-This section answers:
-**What are the conclusions, and what are the limitations of our study?**  
+This section answers:  
+**What are the conclusions, and what are the limitations of our study?**
+
 conclusions:
 
 limitations:
