@@ -1,4 +1,9 @@
 # PPT Outline
+## Presentation Notes
+Total presentation time: 10 minutes
+Estimated speaking time per slide: 1–2 minutes
+Expected number of content slides (excluding the table of contents and section cover slides): 8–12 slides
+
 ## 1. Project Background
 This section answers:
 **Why are we studying this problem, and what is the overall project about?**
