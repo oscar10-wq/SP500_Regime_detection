@@ -4,11 +4,11 @@ Total presentation time: 10 minutes
 Estimated speaking time per slide: 1–2 minutes  
 Expected number of content slides (excluding the table of contents and section cover slides): 8–12 slides
 
-## 1. Project Background
+## 1. Project Background (1 slide)
 This section answers:  
 **Why are we studying this problem, and what is the overall project about?**
 
-## 2. Data Preparation
+## 2. Data Preparation (2-3 slides)
 This section answers:  
 **How do we transform raw data into an analysable dataset?**
 
@@ -24,12 +24,12 @@ Include:
 - Regime label construction
 - Lag and delta feature engineering
 
-## 3. Analysis I: Relationship and Causality Checks
+## 3. Analysis I: Relationship and Causality Checks (2-3 slides)
 This section answers:  
 **Is there a relationship between Fed variables and market regimes? If so, what does that relationship look like, and who leads whom?** 
 
 structure:  
-**Whitch model? + Why this model? + Methodology + outcome**  
+**Whitch model? + Why this model? + Methodology + validation + outcome**  
 
 Include:
 - EDA / correlation heatmap
@@ -45,12 +45,12 @@ These methods mainly focus on:
 - interpreting structural relationships
 - comparing market behaviour before and after events
 
-## 4. Analysis II: Predictive Modelling
+## 4. Analysis II: Predictive Modelling (2-3 slides)
 This section answers:  
 **If regime is treated as a classification target, which variables are most predictive of it? How strong is the predictive power of Fed-related variables?**
 
 structure:  
-**Whitch model? + Why this model? + Methodology + outcome**
+**Whitch model? + Why this model? + Methodology + validation + outcome**
 
 Include:
 - Feature importance classification
@@ -60,7 +60,7 @@ Include:
 - Gradient Boosting
 - Re-modelling after L1 pruning
 
-## 5. Conclusion and Limitations
+## 5. Conclusion and Limitations (1-2 slides)
 This section answers:  
 **What are the conclusions, and what are the limitations of our study?**
 
