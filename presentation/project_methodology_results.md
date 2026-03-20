@@ -228,9 +228,7 @@ The project is built on a compact but information-rich monthly dataset. The rela
 
 # Part 2. Analysis Models
 
-## Analysis I: Relationship and Causality Checks
-
-## 1. EDA / Correlation Heatmap
+## Analysis I: EDA / Correlation Heatmap
 
 ### Definition
 
@@ -269,198 +267,6 @@ Outputs include a correlation heatmap showing pairwise relationships among techn
 ### Interpretation
 
 The heatmap confirms that technical indicators and volatility are strongly associated with regime behaviour while the raw Fed Funds Rate has near-zero correlation with the regime label. This is the first signal that Fed hikes are not the primary immediate driver.
-
-## 2. Lagged Correlation Analysis
-
-### Definition
-
-Lagged correlation analysis tests whether a variable at time `t` is associated with the target at future or past horizons.
-
-It is used to check whether a signal appears contemporaneous, delayed, or reactive.
-
-### Methodology
-
-- Data used:
-  - the same monthly aligned dataset as the heatmap stage
-  - engineered Fed variables including `Fed_Funds_Rate`, `Fed_Change`, and `Fed_Cycle`
-  - the regime target in bull/bear or `bear_rule` form depending on the script
-- Lagged correlation analysis shifted the target forward by selected horizons such as `1`, `6`, and `12` months.
-- In the event-study workflow, cross-correlation was computed over `−24` to `+24` months.
-- Interpretation of lag direction:
-  - `L > 0`: the Fed variable leads the future bear regime
-  - `L < 0`: the bear regime leads the Fed variable
-- This stage was designed to distinguish immediate effects from delayed or cumulative ones.
-
-### Output / Figure
-
-Outputs include lead-lag cross-correlation profiles showing where correlations peak over time.
-
-![lead_lag_ccf](./figures/lead_lag_ccf.png)
-
-Additional outcome reading:
-
-- The lead-lag chart shows that `Fed_Funds_Rate` peaks around **+22 months** with a positive correlation of about **0.40**, which suggests a long-delay association rather than an immediate trigger.
-- `Fed_Change` peaks around **+13 months** with a **negative** correlation of about **−0.28**, meaning rate increases are associated with fewer bear markets one year later, not more.
-- `Fed_Cycle` is negative across the panel and peaks around **+7 months** at about **−0.42**, showing that active hiking cycles are more closely associated with bull-market conditions.
-- The key message of the figure is that the strongest relationships occur with delay or with the opposite sign of the trigger hypothesis.
-
-### Interpretation
-
-The lagged-correlation results suggest that any Fed effect is more delayed and cumulative than immediate. They also help show that some observed Fed-market relationships may reflect the Fed reacting to market conditions rather than causing them contemporaneously.
-
-## 3. Conditional Granger Causality
-
-### Definition
-
-Conditional Granger causality tests whether past values of one variable improve prediction of a target after controlling for other relevant variables.
-
-It addresses the question: does the Fed add incremental explanatory power beyond market information already available?
-
-### Methodology
-
-- Data used:
-  - monthly `bear_rule` target derived from `SPX_Close`
-  - market control variables `SPX_Return`, `VIX_Close`, and `SPX_RSI`
-  - candidate Fed and macro cause variables `Fed_Cycle`, `Fed_Change`, `Fed_Funds_Rate`, and `10Y2Y_Spread`
-- The analysis used the cleaned monthly dataset built from Yahoo Finance and FRED inputs.
-- Target: `bear_rule`
-- Control variables:
-  - `SPX_Return`
-  - `VIX_Close`
-  - `SPX_RSI`
-- Candidate cause variables:
-  - `Fed_Cycle`
-  - `Fed_Change`
-  - `Fed_Funds_Rate`
-  - `10Y2Y_Spread`
-- Tested lags: `1`, `2`, `3`, `6`, and `12` months
-- Restricted model:
-  - past target values
-  - lagged controls
-- Unrestricted model:
-  - restricted model plus lagged cause variable
-- Evaluation metrics:
-  - `F` statistic
-  - p-value
-  - Benjamini-Hochberg adjusted p-value
-  - `R^2` gain between restricted and unrestricted models
-- The broader script also used a chronological train/test separation around `2013-01-01` to avoid leakage in scaling and HMM-based comparisons.
-
-### Output / Figure
-
-Outputs include lag-by-lag conditional causality heatmaps and model-comparison charts summarising incremental explanatory gain.
-
-![conditional_granger](./figures/conditional_granger.png)
-
-Additional outcome reading:
-
-- The conditional Granger figure should be read by focusing on which Fed variables remain significant after controlling for `SPX_Return`, `VIX_Close`, and `SPX_RSI`.
-- In this project, the main outcome is that most cells are weak, insignificant, or practically small once market controls are included.
-- The accompanying model-comparison result shows that the additional explanatory gain from Fed variables is very limited, with reported `R^2` improvement peaking at only around **2.5%**.
-- This means that even when a lag appears statistically interesting, it adds little practical information beyond signals already contained in market variables.
-
-### Interpretation
-
-The main result is that most Fed variables do not materially Granger-cause regime changes once market controls are included. Even where weak significance appears, the added explanatory value is small, supporting the conclusion that Fed hikes are not the dominant immediate trigger.
-
-## 4. Event Study
-
-### Definition
-
-An event study evaluates average market behaviour around a defined event date.
-
-Here, it tests whether the start of a Fed hiking cycle is followed by a systematic increase in bear-market conditions.
-
-### Methodology
-
-- Data used:
-  - monthly `Fed_Funds_Rate`
-  - derived `Fed_Change`
-  - monthly `SPX_Close`
-  - derived `SPX_Return`
-  - the rule-based `bear_rule` label
-- Event definition: the first rate hike after at least `3` months without a hike
-- A rate cut ends the current hiking cycle
-- Event window:
-  - `12` months before the event
-  - `24` months after the event
-- For each event:
-  - cumulative log return was anchored to `0` at the hike-start month
-  - bear-regime flags were extracted over the full window
-- Aggregate outputs included:
-  - individual event return paths
-  - average cumulative return
-  - bear-market frequency across the event window
-  - pre-/at-/post-event bear-rate comparisons
-
-### Output / Figure
-
-The main output is a multi-panel event-study figure showing return behaviour and bear-market frequency around hike-cycle starts.
-
-![event_study](./figures/event_study.png)
-
-Additional outcome reading:
-
-- The event-study figure shows **23 hike-cycle starts** and compares market behaviour from **12 months before** to **24 months after** the first hike.
-- The bear-frequency bars are especially important:
-  - pre-hike average: **23.6%**
-  - at hike start: **21.7%**
-  - post-hike 1-12 months: **18.5%**
-  - post-hike 13-24 months: **11.2%**
-- This means bear-market frequency falls after hikes start instead of rising.
-- The average cumulative-return line also remains positive on average, which means the first hike does not usually coincide with a market peak.
-- The wide spread across episodes indicates that some cycles did end badly, but the pattern is not stable enough to support a reliable trigger interpretation.
-
-### Interpretation
-
-The event-study evidence indicates that bear markets do not typically begin immediately after hikes start. In many cases, markets are still strong before and around the first hike, which weakens the idea of rate hikes as a direct short-term trigger.
-
-## 5. Network Analysis
-
-### Definition
-
-Network analysis represents variables as nodes and strong correlations as edges.
-
-It helps reveal which variables cluster most closely with the regime label and whether Fed variables sit near or far from that target structure.
-
-### Methodology
-
-- Data used:
-  - technical variables such as `SPX_ROC`, `SPX_RSI`, `SPX_MACD`, `SPX_MACDH`, `VIX_Close`, and `SPX_Volume`
-  - macro variables such as `Real_GDP`, `Unemployment`, `Inflation`, and `10Y2Y_Spread`
-  - the policy variable `Fed_Funds_Rate`
-  - the numeric `Regime` label
-- Nodes included selected technical, macro, Fed, and regime variables.
-- `Regime` was created from the 20% rule and converted to numeric form.
-- Pearson correlations were computed over the cleaned monthly dataset.
-- Edges were drawn when `|correlation| >= 0.30`.
-- Stronger edges were highlighted above `0.60`.
-- A spring layout was used so more strongly related variables clustered together.
-- Two views were produced:
-  - full correlation network
-  - regime-centred ego network
-
-### Output / Figure
-
-Outputs include the full feature network and a regime-focused ego network highlighting direct neighbours of the target.
-
-![regime_ego_network](./figures/regime_ego_network.png)
-
-Additional outcome reading:
-
-- The network outcome is read by looking at which nodes sit closest to `Regime` and how many meaningful edges each variable has.
-- Reported results show:
-  - `SPX_ROC`: **+0.680**
-  - `SPX_RSI`: **+0.664**
-  - `SPX_MACDH`: **+0.602**
-  - `VIX_Close`: **−0.520**
-  - `Fed_Funds_Rate`: **−0.022**
-- The full graph contains **12 nodes** and **35 edges**, while `Fed_Funds_Rate` is the least connected node with degree **3**.
-- In the ego network, the direct neighbours of the regime node are mostly technical and volatility features, which means the regime structure is dominated by market-state variables rather than the Fed rate.
-
-### Interpretation
-
-The network structure visually confirms that momentum and volatility features sit much closer to the regime label than the Fed Funds Rate. Fed variables appear comparatively isolated, reinforcing the conclusion that they are not the strongest direct drivers of regime classification.
 
 ---
 
@@ -677,10 +483,7 @@ When technical indicators are reintroduced, overall accuracy rebounds to 89%, bu
 
 ## How the Models Work Together
 
-- **Correlation and lead-lag methods** screen for descriptive relationships and show near-zero raw correlation between `Fed_Funds_Rate` and regime
-- **Conditional Granger causality** tests whether Fed variables add explanatory value after controls; most do not
-- **Event study** checks whether hike-cycle starts coincide with future bear-market onset; they do not
-- **Network analysis** shows `Fed_Funds_Rate` as the least connected node relative to the regime label
+- **EDA / Correlation heatmap** screens for descriptive relationships and shows near-zero raw correlation between `Fed_Funds_Rate` and regime
 - **Experiment 1** establishes that the contemporaneous Fed rate ranks last or near last in baseline classifiers
 - **Experiment 2** shows that 6–12 month lagged Fed features are more informative than the current rate
 - **Experiment 3** identifies `Fed_Funds_Rate_Delta12M` as the top macro predictor, but macro-only timing is poor
@@ -688,7 +491,7 @@ When technical indicators are reintroduced, overall accuracy rebounds to 89%, bu
 
 ## Main Conclusion
 
-Across descriptive, causal, structural, and predictive analyses, the project consistently finds that Fed rate hikes are **not the main immediate trigger** of S&P 500 bear regimes.
+Across descriptive and predictive analyses, the project consistently finds that Fed rate hikes are **not the main immediate trigger** of S&P 500 bear regimes.
 
 The strongest short-horizon signals come from market momentum and volatility features such as `SPX_RSI`, `SPX_ROC`, `SPX_MACDH`, and `VIX_Close`. The raw Fed Funds Rate has near-zero correlation with regime and ranks last (11/11) in the baseline logistic regression.
 
