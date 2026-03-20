@@ -68,7 +68,7 @@ In data science, cleaning improves reliability, comparability, and model validit
 | `SPX_Close` | Non-stationary; regime label is derived from it (leakage); already captured by `SPX_ROC`, `SPX_RSI`, `SPX_MACD` |
 | `SPX_MACDS` | Mathematically redundant — it is the 9-period EMA of `SPX_MACD` (correlation = 0.965) |
 | `Fed_Funds_Future` | Near-perfect inverse correlation with `Fed_Funds_Rate` (r = −0.9999, inverse pricing convention) |
-| `10Y_Treasury_Future` | 52 missing values, which would cause approximately 4 years of data loss if retained |
+| `10Y_Treasury_Future` | 95 missing values; retaining it would force the loss of 52 monthly rows (about 4 years) |
 
 - Missing values from mixed-frequency macro data were handled by monthly reindexing and forward-filling.
 - One row with unresolved missing values after feature construction was dropped, leaving 310 rows.
@@ -84,7 +84,7 @@ In data science, cleaning improves reliability, comparability, and model validit
 
 Expected output: a cleaned monthly dataset with valid observations, consistent feature definitions, and no direct target leakage.
 
-![data_preparation_pipeline](./figures/data_preparation_pipeline.png)
+No additional figure is used here; see the pipeline figure in Section 1.
 
 ### Interpretation
 
@@ -109,7 +109,7 @@ All 12 retained features were confirmed stationary (ADF test, p < 0.05) after th
 | `SPX_Volume` | Percentage change (`pct_change`) |
 | `Real_GDP` | Percentage change (`pct_change`) |
 | `SPX_MACD` | First difference (`.diff`) |
-| `Inflation` | First difference (`.diff`) |
+| `Inflation` | Percentage change followed by first difference (`pct_change().diff()`) |
 | `SPX_ROC`, `SPX_RSI`, `SPX_MACDH`, `VIX_Close`, `Unemployment`, `Fed_Funds_Rate`, `10Y2Y_Spread` | No transformation required |
 
 **ADF stationarity test results (before transformation):**
@@ -146,7 +146,7 @@ The motivation was to capture delayed and cumulative monetary-policy effects rat
 
 Expected output: an engineered feature set containing momentum, volatility, and policy-cycle information that is more informative than raw price and macro levels alone.
 
-![data_preparation_pipeline](./figures/data_preparation_pipeline.png)
+No additional figure is used here; see the pipeline figure in Section 1.
 
 ### Interpretation
 
@@ -176,7 +176,7 @@ In data science, this converts a continuous market series into a supervised lear
 
 Expected output: a monthly binary regime series aligned with the feature matrix and ready for explanatory and predictive analysis.
 
-![data_preparation_pipeline](./figures/data_preparation_pipeline.png)
+No additional figure is used here; see the pipeline figure in Section 1.
 
 ### Interpretation
 
@@ -197,7 +197,7 @@ After monthly alignment, cleaning, stationarity transformation, feature engineer
 - **Features (11 predictors):**
   - `SPX_Volume` (pct_change), `SPX_ROC`, `SPX_RSI`, `SPX_MACD` (diff), `SPX_MACDH`
   - `VIX_Close`
-  - `Real_GDP` (pct_change), `Unemployment`, `Inflation` (diff)
+  - `Real_GDP` (pct_change), `Unemployment`, `Inflation` (pct_change then diff)
   - `Fed_Funds_Rate`, `10Y2Y_Spread`
 - **Target:** `Regime` (1 = Bull, 0 = Bear)
 
@@ -218,11 +218,11 @@ After monthly alignment, cleaning, stationarity transformation, feature engineer
 
 Expected output: a final monthly dataset that is analysis-ready, chronologically aligned, and structured for both explanatory and predictive modelling.
 
-![data_preparation_pipeline](./figures/data_preparation_pipeline.png)
+No additional figure is used here; see the pipeline figure in Section 1.
 
 ### Interpretation
 
-The project is built on a compact but information-rich monthly dataset. The relatively small bear-class proportion (approximately 16–19% of observations) means that bear-detection recall and F1-score are more informative metrics than overall accuracy.
+The project is built on a compact but information-rich monthly dataset. The bear class is relatively small across experiments, so bear-detection recall and F1-score are more informative metrics than overall accuracy.
 
 ---
 
@@ -244,13 +244,16 @@ This is used to identify broad association patterns, detect multicollinearity, a
   - the 20% rule `Regime` label
   - the cleaned base feature set covering technical, macro, and Fed-related variables
 - Pairwise Pearson correlation matrices were computed across the monthly feature set.
+- A lagged-correlation ranking against the S&P 500 target was also computed at `1`, `6`, and `12` month horizons as an initial screening step.
 - ADF stationarity checks were used to assess whether differencing or return transformations were needed.
 - Correlation heatmaps were used as a descriptive first pass rather than as a predictive test.
 - The heatmap also helped motivate the feature removal decisions described in Section 2.
 
 ### Output / Figure
 
-Outputs include a correlation heatmap showing pairwise relationships among technical, macroeconomic, and Fed-related variables.
+The first figure below shows the lagged-correlation ranking used to screen how strongly features remain associated with the S&P 500 target at `1`, `6`, and `12` month horizons. The second figure shows the correlation heatmap used to summarise pairwise relationships among technical, macroeconomic, and Fed-related variables.
+
+![lagged_correlation_ranking](./figures/lagged_correlation_ranking.png)
 
 ![correlation_heatmap](./figures/correlation_heatmap.png)
 
@@ -266,7 +269,7 @@ Outputs include a correlation heatmap showing pairwise relationships among techn
 
 ### Interpretation
 
-The heatmap confirms that technical indicators and volatility are strongly associated with regime behaviour while the raw Fed Funds Rate has near-zero correlation with the regime label. This is the first signal that Fed hikes are not the primary immediate driver.
+The lagged-correlation ranking and the heatmap both suggest that technical indicators and volatility are more tightly linked to regime behaviour than the raw Fed Funds Rate. Across the screening outputs, market-state variables remain more informative than the contemporaneous Fed rate. This is the first signal that Fed hikes are not the primary immediate driver.
 
 ---
 
@@ -301,9 +304,9 @@ Experiment 1 trains three classifiers on the 11-feature baseline set and evaluat
 
 ### Output / Figure
 
-Outputs include test accuracy, classification reports, confusion matrices, and ranked feature-importance bars for each model.
+The figure below shows the Random Forest feature-importance ranking from the baseline holdout experiment. The accompanying tables summarise classification performance across all three baseline models.
 
-![feature_importance_classification](./figures/feature_importance_classification.png)
+![baseline_rf_feature_importance](./figures/baseline_rf_feature_importance.png)
 
 **Results:**
 
@@ -352,9 +355,15 @@ Experiment 2 extends the baseline by adding 3-, 6-, and 12-month lags and moment
 
 ### Output / Figure
 
-Expected outputs: expanded feature table, L1 selection summary, and re-trained model performance.
+The figure below shows the surviving features after L1 penalisation in the monthly-resampled lag/delta experiment. The tables below summarise the pre-pruning logistic result, the L1 selection summary, and the pruned tree-model performance.
 
-![monthly_resampling_lag_delta](./figures/monthly_resampling_lag_delta.png)
+![monthly_resampling_l1_survivors](./figures/monthly_resampling_l1_survivors.png)
+
+**Monthly resampling result before L1 pruning:**
+
+| Model | Accuracy | Bear Precision | Bear Recall | Bear F1 |
+|---|---|---|---|---|
+| Logistic Regression | **80.00%** | 0.00 | 0.00 | 0.00 |
 
 **L1 feature selection results:**
 
@@ -378,7 +387,7 @@ Expected outputs: expanded feature table, L1 selection summary, and re-trained m
 
 ### Interpretation
 
-Once delayed policy effects are represented through lags and delta terms, the best Fed feature rises from average rank 7.7 to 4.0. The L1 penalty retains `Fed_Funds_Rate_Lag6M` and `Fed_Funds_Rate_Lag12M` over the contemporaneous rate, suggesting the market reacts to monetary policy with a 6–12 month delay rather than immediately. Bear recall improves substantially under the threshold = 0.9 regime in Random Forest, trading overall accuracy for better detection of bear months.
+Monthly resampling alone does not improve bear detection: the pre-pruning logistic model predicts only the bull class. However, once delayed policy effects are represented through lags and delta terms, the best Fed feature rises from average rank 7.7 to 4.0. The L1 penalty retains `Fed_Funds_Rate_Lag6M` and `Fed_Funds_Rate_Lag12M` over the contemporaneous rate, suggesting that lagged policy features are more informative than the current rate level. Bear recall also improves substantially under the threshold = 0.9 regime in Random Forest, trading overall accuracy for better detection of bear months.
 
 ---
 
@@ -405,7 +414,9 @@ Experiment 3 tests whether Fed and macro variables alone, without any technical 
 
 ### Output / Figure
 
-Expected output: walk-forward performance summary and feature importance rankings showing which macro signals are most useful over time.
+The figure below shows the walk-forward validation setup used in the macro-only experiment. The tables below summarise out-of-sample performance and the cross-model ranking of the strongest Fed policy feature.
+
+![walk_forward_setup](./figures/walk_forward_setup.png)
 
 **Results (Walk-Forward, Pruned):**
 
@@ -426,7 +437,7 @@ Expected output: walk-forward performance summary and feature importance ranking
 
 ### Interpretation
 
-When technical indicators are removed, `Fed_Funds_Rate_Delta12M` (the 12-month momentum in the Fed Funds Rate) becomes the **top predictor** in both tree-based models. This is the key causal evidence in the project: it is not the absolute level of the rate that matters, but the **shock of rapid hiking**. However, the macro-only models produce bear precision of only 15–27%, meaning they correctly identify economic fragility but cannot time the exact market breakdown. This is because macro data moves too slowly to predict the precise month of the regime flip.
+When technical indicators are removed, `Fed_Funds_Rate_Delta12M` (the 12-month momentum in the Fed Funds Rate) becomes the **top predictor** in both tree-based models. This is the clearest macro-only evidence in the project that the rate level itself matters less than the pace of tightening over time. However, the macro-only models produce bear precision of only 15–27%, meaning they identify fragile conditions but cannot time the exact market breakdown. This is because macro data moves too slowly to predict the precise month of the regime flip.
 
 ---
 
@@ -448,9 +459,9 @@ Experiment 4 reintroduces technical indicators alongside macro and lag/delta fea
 
 ### Output / Figure
 
-Expected outputs: updated walk-forward performance and revised feature importance confirming or overturning Experiment 3 findings.
+The figure below shows the Random Forest (CV) feature-importance ranking from the full-feature walk-forward experiment. The tables below summarise the updated out-of-sample performance and the cross-model ranking of the strongest Fed-related indicator.
 
-![remodelling_after_l1_pruning](./figures/remodelling_after_l1_pruning.png)
+![full_feature_walkforward_rf_importance](./figures/full_feature_walkforward_rf_importance.png)
 
 **Results (Walk-Forward, Full Features, Pruned):**
 
@@ -467,7 +478,7 @@ Expected outputs: updated walk-forward performance and revised feature importanc
 
 ### Interpretation
 
-When technical indicators are reintroduced, overall accuracy rebounds to 89%, but this partly reflects the market-state information embedded in RSI and ROC. Importantly, `Fed_Funds_Rate_Lag12M` and `Fed_Funds_Rate_Delta12M` both survive the L1 penalty and remain in the top-5 for tree models. This means that even when competing against technical momentum, the delayed Fed rate signal carries independent predictive value — confirming that the 12-month lagged policy effect is robust rather than a statistical artefact of the macro-only setting.
+When technical indicators are reintroduced, overall accuracy rebounds to 89%, but this partly reflects the market-state information embedded in RSI and ROC. Importantly, `Fed_Funds_Rate_Lag12M` survives the L1 penalty, and Fed-related indicators still rank highly across models even in the full-feature setting. This means that the delayed Fed rate signal continues to carry independent predictive value when competing against technical momentum.
 
 ---
 

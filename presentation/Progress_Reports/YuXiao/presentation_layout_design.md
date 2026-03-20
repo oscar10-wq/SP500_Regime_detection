@@ -397,7 +397,7 @@ Outcome
 - This suggests that Fed effects are more `lagged / cumulative` than immediate
 
 **Layout suggestion**  
-Use [cell_50_fig_0.png](/Users/xiaoyu/Documents/UCL/YuYu-UCL/COMP0047_Data%20Science/project/SP500_Regime_detection/notebook_figures/cell_50_fig_0.png) or [cell_49_fig_1.png](/Users/xiaoyu/Documents/UCL/YuYu-UCL/COMP0047_Data%20Science/project/SP500_Regime_detection/notebook_figures/cell_49_fig_1.png) as the main visual.
+Use [cell_50_fig_0.png](/Users/xiaoyu/Documents/UCL/YuYu-UCL/COMP0047_Data%20Science/project/SP500_Regime_detection/presentation/figures/cell_50_fig_0.png) or [cell_49_fig_1.png](/Users/xiaoyu/Documents/UCL/YuYu-UCL/COMP0047_Data%20Science/project/SP500_Regime_detection/presentation/figures/cell_49_fig_1.png) as the main visual.
 
 Recommended layout: text on the left, figure on the right.  
 Emphasise one takeaway sentence: `Raw Fed rate is weak, engineered Fed signals are stronger.`
