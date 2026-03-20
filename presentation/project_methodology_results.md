@@ -4,8 +4,9 @@ This document explains how the project dataset is constructed and how each analy
 
 ## Dataset Overview
 
-- **Sample period:** January 2000 to January 2026, depending on the analysis cut
+- **Sample period:** January 2000 to January 2026
 - **Frequency:** Monthly
+- **Observations:** 310 monthly rows (after cleaning)
 - **Primary sources:** Yahoo Finance, FRED, and selected futures data
 - **Target:** Bull/bear regime label derived from S&P 500 price movements using a 20% rule
 
@@ -32,6 +33,9 @@ In data science, this is used to make variables comparable, prevent high-frequen
   - `Inflation`
   - `Fed_Funds_Rate`
   - `10Y2Y_Spread`
+- Futures series were also downloaded:
+  - `Fed_Funds_Future`
+  - `10Y_Treasury_Future`
 - Quarterly and lower-frequency FRED series were reindexed to a monthly start-of-month calendar and forward-filled.
 - Futures series were converted to monthly timestamps using `to_period("M").to_timestamp()`.
 - The common analysis window was filtered to `2000-01-01` through `2026-01-01`.
@@ -57,15 +61,24 @@ In data science, cleaning improves reliability, comparability, and model validit
 
 ### Methodology
 
+**Dropped features and rationale:**
+
+| Feature | Reason for Removal |
+|---|---|
+| `SPX_Close` | Non-stationary; regime label is derived from it (leakage); already captured by `SPX_ROC`, `SPX_RSI`, `SPX_MACD` |
+| `SPX_MACDS` | Mathematically redundant — it is the 9-period EMA of `SPX_MACD` (correlation = 0.965) |
+| `Fed_Funds_Future` | Near-perfect inverse correlation with `Fed_Funds_Rate` (r = −0.9999, inverse pricing convention) |
+| `10Y_Treasury_Future` | 52 missing values, which would cause approximately 4 years of data loss if retained |
+
 - Missing values from mixed-frequency macro data were handled by monthly reindexing and forward-filling.
-- Rows with unresolved missing values after feature construction were dropped before modelling.
-- Redundant variables were reduced in model-specific datasets when features overlapped heavily or served similar roles.
-- `SPX_Close` was excluded from classification feature sets because the regime label is derived directly from it.
-- This leakage-prevention rule was especially important for logistic regression, random forest, and gradient boosting.
-- Only variables required by each analysis were kept, for example:
-  - Network analysis dropped uncategorised or unused columns
-  - Granger analysis dropped rows missing `SPX_Return`, `VIX_Close`, `SPX_RSI`, `Fed_Funds_Rate`, `Fed_Change`, or `bear_rule`
-- Standardisation, where used, was fit on the training split only and then applied to test data.
+- One row with unresolved missing values after feature construction was dropped, leaving 310 rows.
+- `SPX_Close` was excluded from all classification feature sets to prevent the model from directly learning the target-generating variable.
+
+**Notable high-correlation pairs discovered:**
+- `Fed_Funds_Future` ↔ `Fed_Funds_Rate`: r = −0.999966
+- `Inflation` ↔ `Real_GDP`: r = 0.9898
+- `SPX_MACD` ↔ `SPX_MACDS`: r = 0.9653
+- `SPX_ROC` ↔ `SPX_RSI`: r = 0.7998
 
 ### Output / Figure
 
@@ -87,23 +100,47 @@ In data science, this improves the ability of models to represent mechanisms tha
 
 ### Methodology
 
-- Technical indicators were computed from monthly S&P 500 closes:
-  - `SPX_ROC`: 12-period rate of change
-  - `SPX_RSI`: 14-period relative strength index
-  - `SPX_MACD`, `SPX_MACDH`, `SPX_MACDS`: MACD with `fast=12`, `slow=26`, `signal=9`
-- Additional market features included:
-  - `SPX_Return`: log return of `SPX_Close`
-  - `SPX_RV_20`: 20-period rolling volatility of returns in the Granger workflow
-  - `VIX_Change`: first difference of `VIX_Close` where needed
-- Fed-policy features were engineered as:
-  - `Fed_Change`: month-over-month difference in `Fed_Funds_Rate`
-  - `Fed_Cycle`: persistent cycle direction, where hikes are `+1`, cuts are `-1`, and flat months carry forward the last direction using a `0.05` threshold
-- In the advanced modelling stage described in project progress notes, additional lag and momentum features were added, including:
-  - `Fed_Funds_Rate_Lag3M`
-  - `Fed_Funds_Rate_Lag6M`
-  - `Fed_Funds_Rate_Delta3M`
-  - `Fed_Funds_Rate_Delta6M`
-- The motivation was to capture delayed and cumulative monetary-policy effects rather than only contemporaneous rate levels.
+**Stationarity transformations (applied before modelling):**
+
+All 12 retained features were confirmed stationary (ADF test, p < 0.05) after the following transformations:
+
+| Feature | Transformation |
+|---|---|
+| `SPX_Volume` | Percentage change (`pct_change`) |
+| `Real_GDP` | Percentage change (`pct_change`) |
+| `SPX_MACD` | First difference (`.diff`) |
+| `Inflation` | First difference (`.diff`) |
+| `SPX_ROC`, `SPX_RSI`, `SPX_MACDH`, `VIX_Close`, `Unemployment`, `Fed_Funds_Rate`, `10Y2Y_Spread` | No transformation required |
+
+**ADF stationarity test results (before transformation):**
+
+| Feature | p-value | Status |
+|---|---|---|
+| `SPX_Volume` | 0.3944 | Non-stationary |
+| `SPX_ROC` | 0.0010 | Stationary |
+| `SPX_RSI` | 0.0299 | Stationary |
+| `SPX_MACD` | 0.8662 | Non-stationary |
+| `SPX_MACDH` | 0.0000 | Stationary |
+| `VIX_Close` | 0.0000 | Stationary |
+| `Real_GDP` | 0.9850 | Non-stationary |
+| `Unemployment` | 0.0362 | Stationary |
+| `Inflation` | 0.9988 | Non-stationary |
+| `Fed_Funds_Rate` | 0.0012 | Stationary |
+| `10Y2Y_Spread` | 0.0162 | Stationary |
+| `Regime` | 0.0023 | Stationary |
+
+All 12 features confirmed stationary after transformations.
+
+**Engineered policy/macro lag and delta features (Experiments 2–4):**
+
+- `Fed_Funds_Rate_Lag3M`, `Fed_Funds_Rate_Lag6M`, `Fed_Funds_Rate_Lag12M`
+- `Fed_Funds_Rate_Delta3M`, `Fed_Funds_Rate_Delta6M`, `Fed_Funds_Rate_Delta12M`
+- `10Y2Y_Spread_Lag3M`, `10Y2Y_Spread_Lag6M`, `10Y2Y_Spread_Lag12M`
+- `10Y2Y_Spread_Delta3M`, `10Y2Y_Spread_Delta6M`, `10Y2Y_Spread_Delta12M`
+- `Unemployment_Delta3M`, `Unemployment_Delta6M`, `Unemployment_Delta12M`
+- `Inflation_Delta3M`, `Inflation_Delta6M`, `Inflation_Delta12M`
+
+The motivation was to capture delayed and cumulative monetary-policy effects rather than only contemporaneous rate levels.
 
 ### Output / Figure
 
@@ -113,7 +150,7 @@ Expected output: an engineered feature set containing momentum, volatility, and 
 
 ### Interpretation
 
-These engineered variables translate raw data into economically meaningful signals. They are important because later analyses show that market momentum and volatility features are often more predictive than the raw Fed rate, while lagged and delta-based Fed features can reveal delayed policy effects.
+These engineered variables translate raw data into economically meaningful signals. They are important because later analyses show that market momentum and volatility features are often more predictive than the raw Fed rate, while lagged and delta-based Fed features reveal delayed policy effects.
 
 ## 4. Regime Label Construction (20% Rule)
 
@@ -133,8 +170,7 @@ In data science, this converts a continuous market series into a supervised lear
 - While in a bear regime:
   - the running trough was updated when a new low was reached
   - a rise to `120%` or more of that trough triggered a switch back to bull
-- In utility code, the classifier returns `1 = Bull` and `0 = Bear`.
-- In some analysis scripts, this was flipped to `bear_rule`, where `1 = Bear` and `0 = Bull`, to make interpretation more direct.
+- The classifier returns `1 = Bull` and `0 = Bear`.
 
 ### Output / Figure
 
@@ -152,29 +188,31 @@ The regime label is the foundation of the project. It operationalises the resear
 
 This summary consolidates the final output of the data-processing pipeline.
 
-In data science, a pipeline summary is useful because it clearly states the size, structure, and readiness of the final dataset before analysis begins.
-
 ### Methodology
 
-- After monthly alignment, cleaning, feature engineering, and regime labelling, the project produced a unified monthly panel for downstream analysis.
-- The core monthly sample covers **January 2000 to December 2025**, which gives approximately **312 monthly observations**.
-- The aligned raw dataset contains **13 main variables** before adding the target label:
-  - `SPX_Close`
-  - `SPX_Volume`
-  - `SPX_ROC`
-  - `SPX_RSI`
-  - `SPX_MACD`
-  - `SPX_MACDH`
-  - `SPX_MACDS`
+After monthly alignment, cleaning, stationarity transformation, feature engineering, and regime labelling, the project produced a unified monthly panel.
+
+**Final base dataset:**
+- **Rows:** 310 monthly observations (January 2000 – December 2025)
+- **Features (11 predictors):**
+  - `SPX_Volume` (pct_change), `SPX_ROC`, `SPX_RSI`, `SPX_MACD` (diff), `SPX_MACDH`
   - `VIX_Close`
-  - `Real_GDP`
-  - `Unemployment`
-  - `Inflation`
-  - `Fed_Funds_Rate`
-  - `10Y2Y_Spread`
-- After adding the 20% rule regime label, the base modelling table contains **1 target label** plus the aligned predictors.
-- In the baseline predictive-modelling workflow, `SPX_Close` is excluded to prevent leakage, leaving **12 main predictor features** for classification.
-- In the advanced lag/delta experiment described in the project progress reports, the engineered feature set expanded to **23 features** before L1 pruning and was then reduced to **11 retained features**.
+  - `Real_GDP` (pct_change), `Unemployment`, `Inflation` (diff)
+  - `Fed_Funds_Rate`, `10Y2Y_Spread`
+- **Target:** `Regime` (1 = Bull, 0 = Bear)
+
+**Train/test splits by experiment:**
+
+| Experiment | Type | Train | Test |
+|---|---|---|---|
+| Exp 1 | Holdout | 248 months | 62 months |
+| Exp 2 | Holdout (with lags/deltas) | 238 months | 60 months |
+| Exp 3 & 4 | Walk-Forward | Expanding | 245 months total OOS |
+
+**Class distribution:**
+- Exp 1 train: Bull = 208, Bear = 40
+- Exp 1 test: Bull = 50, Bear = 12
+- Walk-Forward OOS: Bull = 221, Bear = 24
 
 ### Output / Figure
 
@@ -184,7 +222,7 @@ Expected output: a final monthly dataset that is analysis-ready, chronologically
 
 ### Interpretation
 
-This summary shows that the project is built on a relatively compact but information-rich monthly dataset. The sample size is appropriate for interpretable econometric checks and medium-sized classification models, while the engineered feature design allows the project to compare immediate market signals with delayed policy effects.
+The project is built on a compact but information-rich monthly dataset. The relatively small bear-class proportion (approximately 16–19% of observations) means that bear-detection recall and F1-score are more informative metrics than overall accuracy.
 
 ---
 
@@ -210,7 +248,7 @@ This is used to identify broad association patterns, detect multicollinearity, a
 - Pairwise Pearson correlation matrices were computed across the monthly feature set.
 - ADF stationarity checks were used to assess whether differencing or return transformations were needed.
 - Correlation heatmaps were used as a descriptive first pass rather than as a predictive test.
-- The heatmap also helped motivate later leakage control and feature-pruning decisions where features appeared highly overlapping.
+- The heatmap also helped motivate the feature removal decisions described in Section 2.
 
 ### Output / Figure
 
@@ -218,15 +256,19 @@ Outputs include a correlation heatmap showing pairwise relationships among techn
 
 ![correlation_heatmap](./figures/correlation_heatmap.png)
 
-Additional outcome reading:
+**Notable correlation results with `Regime`:**
 
-- In the heatmap, the most informative result is not a single coefficient but the overall clustering pattern.
-- Technical indicators such as `SPX_ROC`, `SPX_RSI`, and `SPX_MACDH` are expected to show stronger association with the regime label than the raw `Fed_Funds_Rate`.
-- If the heatmap shows the Fed rate with only weak or mixed correlations to the target while technical variables form a tighter block, that means the market's internal momentum structure is more closely related to regime states than current policy levels.
+| Feature | Correlation with Regime |
+|---|---|
+| `SPX_ROC` | +0.680 |
+| `SPX_RSI` | +0.664 |
+| `SPX_MACDH` | +0.602 |
+| `VIX_Close` | −0.520 |
+| `Fed_Funds_Rate` | −0.022 |
 
 ### Interpretation
 
-The heatmap provides an overview of which variables move together and which ones are structurally separate. In this project, the descriptive pattern already suggests that technical indicators and volatility are more closely linked to regime behaviour than the raw Fed Funds Rate.
+The heatmap confirms that technical indicators and volatility are strongly associated with regime behaviour while the raw Fed Funds Rate has near-zero correlation with the regime label. This is the first signal that Fed hikes are not the primary immediate driver.
 
 ## 2. Lagged Correlation Analysis
 
@@ -243,7 +285,7 @@ It is used to check whether a signal appears contemporaneous, delayed, or reacti
   - engineered Fed variables including `Fed_Funds_Rate`, `Fed_Change`, and `Fed_Cycle`
   - the regime target in bull/bear or `bear_rule` form depending on the script
 - Lagged correlation analysis shifted the target forward by selected horizons such as `1`, `6`, and `12` months.
-- In the event-study workflow, cross-correlation was computed over `-24` to `+24` months.
+- In the event-study workflow, cross-correlation was computed over `−24` to `+24` months.
 - Interpretation of lag direction:
   - `L > 0`: the Fed variable leads the future bear regime
   - `L < 0`: the bear regime leads the Fed variable
@@ -258,8 +300,8 @@ Outputs include lead-lag cross-correlation profiles showing where correlations p
 Additional outcome reading:
 
 - The lead-lag chart shows that `Fed_Funds_Rate` peaks around **+22 months** with a positive correlation of about **0.40**, which suggests a long-delay association rather than an immediate trigger.
-- `Fed_Change` peaks around **+13 months** with a **negative** correlation of about **-0.28**, meaning rate increases are associated with fewer bear markets one year later, not more.
-- `Fed_Cycle` is negative across the panel and peaks around **+7 months** at about **-0.42**, showing that active hiking cycles are more closely associated with bull-market conditions.
+- `Fed_Change` peaks around **+13 months** with a **negative** correlation of about **−0.28**, meaning rate increases are associated with fewer bear markets one year later, not more.
+- `Fed_Cycle` is negative across the panel and peaks around **+7 months** at about **−0.42**, showing that active hiking cycles are more closely associated with bull-market conditions.
 - The key message of the figure is that the strongest relationships occur with delay or with the opposite sign of the trigger hypothesis.
 
 ### Interpretation
@@ -411,8 +453,8 @@ Additional outcome reading:
   - `SPX_ROC`: **+0.680**
   - `SPX_RSI`: **+0.664**
   - `SPX_MACDH`: **+0.602**
-  - `VIX_Close`: **-0.520**
-  - `Fed_Funds_Rate`: **-0.022**
+  - `VIX_Close`: **−0.520**
+  - `Fed_Funds_Rate`: **−0.022**
 - The full graph contains **12 nodes** and **35 edges**, while `Fed_Funds_Rate` is the least connected node with degree **3**.
 - In the ego network, the direct neighbours of the regime node are mostly technical and volatility features, which means the regime structure is dominated by market-state variables rather than the Fed rate.
 
@@ -420,271 +462,206 @@ Additional outcome reading:
 
 The network structure visually confirms that momentum and volatility features sit much closer to the regime label than the Fed Funds Rate. Fed variables appear comparatively isolated, reinforcing the conclusion that they are not the strongest direct drivers of regime classification.
 
+---
+
 ## Analysis II: Predictive Modelling
 
-## 6. Feature Importance Classification
+The predictive modelling section uses four structured experiments to test the research question from multiple angles: holdout validation on baseline features, holdout with lag/delta engineering, walk-forward testing on macro-only data, and walk-forward testing on the full feature set.
+
+---
+
+## Experiment 1: Baseline Classification (Holdout Validation)
 
 ### Definition
 
-Feature importance classification compares predictive models and ranks which variables are most useful for identifying bull and bear regimes.
-
-It is used to answer not just whether a model predicts well, but which variables drive that prediction.
+Experiment 1 trains three classifiers on the 11-feature baseline set and evaluates them on a held-out test set to establish benchmark performance and initial feature importance rankings.
 
 ### Methodology
 
 - Data used:
-  - the monthly base classification dataset
-  - `Regime` as the binary target
-  - 12 baseline predictors after excluding `SPX_Close` for leakage prevention
-- The baseline feature set included:
-  - `SPX_Volume`, `SPX_ROC`, `SPX_RSI`
-  - `SPX_MACD`, `SPX_MACDH`, `SPX_MACDS`
-  - `VIX_Close`
-  - `Real_GDP`, `Unemployment`, `Inflation`
-  - `Fed_Funds_Rate`, `10Y2Y_Spread`
-- The project compared logistic regression, random forest, and gradient boosting on the same monthly train/test split.
-- Model-based rankings were then compared to see where the Fed Funds Rate sat across methods.
+  - 310-row monthly dataset after cleaning
+  - 11 predictor features (see Data Processing Summary)
+  - `Regime` as binary target
+- Train/test split:
+  - Training: 248 months (months 1–248, up to 2013-01-01)
+  - Test: 62 months (months 249–310)
+  - Train: Bull = 208, Bear = 40; Test: Bull = 50, Bear = 12
+- Features were standardised with `StandardScaler` fit on training data only
+- Models trained:
+  - Logistic Regression (`max_iter=2000`, balanced class weights)
+  - Random Forest (`n_estimators=300`, `max_depth=6`, `class_weight="balanced"`, `random_state=42`)
+  - Gradient Boosting (`n_estimators=200`, `max_depth=4`, `random_state=42`)
+- Feature importance: absolute coefficients (LR), mean decrease in impurity (RF, GB)
 
 ### Output / Figure
 
-Outputs include cross-model rankings, model comparison summaries, and feature-importance visualisations.
+Outputs include test accuracy, classification reports, confusion matrices, and ranked feature-importance bars for each model.
 
 ![feature_importance_classification](./figures/feature_importance_classification.png)
 
-Additional outcome reading:
+**Results:**
 
-- The most important outcome here is the **cross-model comparison** rather than any single model.
-- Reported baseline results show:
-  - Logistic Regression accuracy: **90.48%**
-  - Random Forest accuracy: **80.95%**
-  - Gradient Boosting accuracy: **80.95%**
-- The `Fed_Funds_Rate` ranks:
-  - **#2 / 12** in Logistic Regression
-  - **#11 / 12** in Random Forest
-  - **#10 / 12** in Gradient Boosting
-- Its cross-model average rank is **7.7 / 12**, which means it is not consistently a top predictor.
-- This outcome matters because it shows that the answer depends on model structure: the Fed rate has some linear association, but it is not robustly dominant across non-linear models.
+| Model | Accuracy | Bear Precision | Bear Recall | Bear F1 |
+|---|---|---|---|---|
+| Logistic Regression | **98.39%** | 1.00 | 0.92 | 0.96 |
+| Random Forest | **83.87%** | 1.00 | 0.17 | 0.29 |
+| Gradient Boosting | **88.71%** | 1.00 | 0.42 | 0.59 |
+
+**`Fed_Funds_Rate` ranking across models:**
+
+| Model | Rank | Out of |
+|---|---|---|
+| Logistic Regression | #11 | 11 |
+| Random Forest | #7 | 11 |
+| Gradient Boosting | #5 | 11 |
+| **Average** | **7.7** | **11** |
+
+**Top features (Random Forest):** `SPX_RSI`, `SPX_ROC`, `SPX_MACDH`, `VIX_Close`, `SPX_MACD`
 
 ### Interpretation
 
-This stage provides the predictive overview for the whole modelling section. The main pattern is that technical and volatility features rank more consistently near the top, while the raw Fed Funds Rate is typically weaker in the baseline specification.
+The raw `Fed_Funds_Rate` consistently ranks in the lower half across all three model types. Logistic Regression achieves 98.39% accuracy, but this is partly inflated by class imbalance; bear recall of 0.17 in Random Forest highlights that the model misses most bear months without threshold adjustment. Technical momentum and volatility features are the dominant predictors in the baseline.
 
-## 7. Monthly Resampling with Lag/Delta Feature Engineering
+---
+
+## Experiment 2: Lag/Delta Engineering with L1 Feature Selection (Holdout)
 
 ### Definition
 
-Monthly resampling with lag/delta feature engineering extends the baseline model by explicitly representing delayed and cumulative policy effects.
-
-It is used when the raw contemporaneous value of a variable may miss timing effects that matter for prediction.
+Experiment 2 extends the baseline by adding 3-, 6-, and 12-month lags and momentum deltas for Fed, spread, macro, and unemployment variables, then uses L1 regularisation to prune the expanded feature set before re-training.
 
 ### Methodology
 
 - Data used:
-  - the monthly-aligned base dataset
-  - macroeconomic and Fed-related variables resampled to the common monthly frequency
-  - engineered lag and delta features for selected policy and macro variables
-- The motivation for monthly resampling was to put slower-moving macro and Fed data on a fairer footing relative to market indicators.
-- Additional engineered features reported in the project notes included:
-  - `Fed_Funds_Rate_Lag3M`
-  - `Fed_Funds_Rate_Lag6M`
-  - `Fed_Funds_Rate_Delta3M`
-  - `Fed_Funds_Rate_Delta6M`
-- Similar lag and momentum logic was applied to macro-related variables in the advanced experiment.
-- This stage expanded the predictor set before feature selection and re-modelling.
+  - monthly-aligned base dataset
+  - 27 total features after adding lag and delta terms
+- Additional engineered features included:
+  - `Fed_Funds_Rate_Lag3M`, `Fed_Funds_Rate_Lag6M`, `Fed_Funds_Rate_Lag12M`
+  - `Fed_Funds_Rate_Delta3M`, `Fed_Funds_Rate_Delta6M`, `Fed_Funds_Rate_Delta12M`
+  - equivalent lags and deltas for `10Y2Y_Spread`, `Unemployment`, and `Inflation`
+- L1-penalised Logistic Regression was applied to select predictors
+- Tree models were then retrained on the pruned feature set only
+- Train: 238 months; Test: 60 months (Bull = 48, Bear = 12)
+- Probability threshold adjusted from 0.5 to **0.9** to improve bear recall
 
 ### Output / Figure
 
-Expected outputs include the expanded monthly feature table and model-ready lag/delta predictors for the second-round classification experiment.
+Expected outputs: expanded feature table, L1 selection summary, and re-trained model performance.
 
 ![monthly_resampling_lag_delta](./figures/monthly_resampling_lag_delta.png)
 
-Additional outcome reading:
+**L1 feature selection results:**
 
-- The key result of the monthly resampling experiment is that simple downsampling alone did **not** materially change the baseline ranking pattern.
-- The more important outcome comes from the lag/delta extension: once delayed and momentum-based features are added, Fed-related information becomes more visible.
-- In other words, the outcome suggests that the issue is not only frequency mismatch, but also that the economically meaningful Fed signal is embedded in **timing** and **rate-of-change**, not just in the current level.
+| Statistic | Value |
+|---|---|
+| Original features | 27 |
+| Retained after L1 | 13 |
+| Eliminated | 14 |
+
+**Features retained after L1 pruning:**
+`Unemployment_Delta3M`, `SPX_MACD`, `Fed_Funds_Rate_Lag12M`, `10Y2Y_Spread_Lag6M`, `VIX_Close`, `SPX_Volume`, `Fed_Funds_Rate_Lag6M`, `Inflation_Delta6M`, `10Y2Y_Spread_Delta6M`, `Inflation`, `SPX_ROC`, `Unemployment`, `SPX_RSI`
+
+**Results (threshold = 0.9):**
+
+| Model | Accuracy | Bear Precision | Bear Recall | Bear F1 |
+|---|---|---|---|---|
+| Random Forest | **75.00%** | 0.43 | 0.75 | 0.55 |
+| Gradient Boosting | **91.67%** | 1.00 | 0.58 | 0.74 |
+
+**Best Fed policy indicator average rank:** **4.0 / 27** (across LR, RF, GB)
 
 ### Interpretation
 
-This stage is important because it tests whether the Fed effect is hidden by timing. The resulting design supports the project’s more nuanced conclusion that policy effects are not mainly immediate, but may become visible after delay and momentum engineering.
+Once delayed policy effects are represented through lags and delta terms, the best Fed feature rises from average rank 7.7 to 4.0. The L1 penalty retains `Fed_Funds_Rate_Lag6M` and `Fed_Funds_Rate_Lag12M` over the contemporaneous rate, suggesting the market reacts to monetary policy with a 6–12 month delay rather than immediately. Bear recall improves substantially under the threshold = 0.9 regime in Random Forest, trading overall accuracy for better detection of bear months.
 
-## 8. Logistic Regression
+---
+
+## Experiment 3: Macro-Only Walk-Forward Testing
 
 ### Definition
 
-Logistic regression is a linear classification model that estimates the probability of a binary outcome.
-
-It is useful here because it provides an interpretable baseline and shows the direction and magnitude of each feature's association with bull or bear regimes.
+Experiment 3 tests whether Fed and macro variables alone, without any technical indicators, can predict regime switches when evaluated under walk-forward (expanding-window) cross-validation.
 
 ### Methodology
 
 - Data used:
-  - monthly `Regime` target
-  - the 12 baseline monthly predictor features after excluding `SPX_Close`
-  - standardised train and test matrices derived from the chronological split
-- Target: `Regime`
-- Base feature set:
-  - `SPX_Volume`, `SPX_ROC`, `SPX_RSI`
-  - `SPX_MACD`, `SPX_MACDH`, `SPX_MACDS`
-  - `VIX_Close`
-  - `Real_GDP`, `Unemployment`, `Inflation`
-  - `Fed_Funds_Rate`, `10Y2Y_Spread`
-- `SPX_Close` was excluded to avoid leakage.
-- Data was split chronologically using an `80/20` train/test split.
-- Features were standardised with `StandardScaler` fit on training data only.
-- Model parameter: `max_iter=2000`
+  - macro-only feature set: `Fed_Funds_Rate`, `10Y2Y_Spread`, `Real_GDP`, `Unemployment`, `Inflation`, plus all their lag and delta variants
+  - 23 initial macro features before L1 pruning
+  - `Regime` as target
+- Walk-forward testing:
+  - Expanding window approach; training set grows by one month at each step
+  - Total out-of-sample period: **245 months**
+  - Out-of-sample regime distribution: Bull = 221, Bear = 24
+- L1 regularisation pruned features from 23 to 19 before tree-model training
+
+**Features retained after L1 pruning (19):**
+`Unemployment_Delta3M`, `10Y2Y_Spread`, `Fed_Funds_Rate_Lag12M`, `Unemployment_Delta12M`, `10Y2Y_Spread_Lag6M`, `10Y2Y_Spread_Delta12M`, `Fed_Funds_Rate_Lag3M`, `Fed_Funds_Rate`, `Fed_Funds_Rate_Lag6M`, `Inflation_Delta6M`, `10Y2Y_Spread_Lag3M`, `Fed_Funds_Rate_Delta12M`, `Fed_Funds_Rate_Delta6M`, `Inflation_Delta3M`, `Fed_Funds_Rate_Delta3M`, `Inflation_Delta12M`, `Real_GDP`, `10Y2Y_Spread_Lag12M`, `Unemployment`
 
 ### Output / Figure
 
-Outputs include test accuracy, classification metrics, confusion matrices, and coefficient plots on standardised features.
+Expected output: walk-forward performance summary and feature importance rankings showing which macro signals are most useful over time.
 
-![lr_coefficients](./figures/lr_coefficients.png)
+**Results (Walk-Forward, Pruned):**
 
-Additional outcome reading:
+| Model | Accuracy | Bear Precision | Bear Recall | Bear F1 |
+|---|---|---|---|---|
+| Logistic Regression | **82%** | 0.27 | 0.46 | 0.34 |
+| Random Forest | **75%** | 0.20 | 0.50 | 0.28 |
+| Gradient Boosting | **68%** | 0.15 | 0.50 | 0.23 |
 
-- The logistic-regression coefficient chart should be read by both **magnitude** and **sign**.
-- Large positive coefficients indicate variables associated with the bull class, while large negative coefficients indicate variables associated with the bear class.
-- In the reported baseline results, `Fed_Funds_Rate` ranks **#2 / 12** by absolute coefficient size, which means it has a noticeable linear association with the target.
-- However, this does not mean it is the trigger of bear regimes; rather, it suggests that higher rates often coexist with strong-economy bull periods in the sample.
-- The same model achieved **90.48%** accuracy, but this should be interpreted together with class imbalance rather than as proof of causal importance.
+**Critical finding — `Fed_Funds_Rate_Delta12M` feature rank:**
+
+| Model | Rank | Out of |
+|---|---|---|
+| Logistic Regression | #4 | 23 |
+| Random Forest | **#1** | 19 |
+| Gradient Boosting | **#1** | 19 |
+| **Average** | **2.0** | — |
 
 ### Interpretation
 
-Logistic regression provides a transparent benchmark for which variables push the model toward bull or bear classifications. In this project, the raw Fed Funds Rate is not among the strongest coefficients, while market-based signals are more prominent.
+When technical indicators are removed, `Fed_Funds_Rate_Delta12M` (the 12-month momentum in the Fed Funds Rate) becomes the **top predictor** in both tree-based models. This is the key causal evidence in the project: it is not the absolute level of the rate that matters, but the **shock of rapid hiking**. However, the macro-only models produce bear precision of only 15–27%, meaning they correctly identify economic fragility but cannot time the exact market breakdown. This is because macro data moves too slowly to predict the precise month of the regime flip.
 
-## 9. Random Forest
+---
+
+## Experiment 4: Full Feature Walk-Forward Testing (Validation Check)
 
 ### Definition
 
-Random forest is an ensemble of decision trees trained on bootstrapped samples and random subsets of features.
-
-It solves non-linear classification problems and is useful for ranking feature importance without assuming linear effects.
+Experiment 4 reintroduces technical indicators alongside macro and lag/delta features under the same walk-forward framework as Experiment 3, serving as a validation check on whether technical indicators mask or amplify the Fed signal.
 
 ### Methodology
 
 - Data used:
-  - the same monthly baseline classification dataset as logistic regression
-  - the 12 cleaned predictors excluding `SPX_Close`
-  - the chronological `80/20` train/test split
-- Used the same cleaned monthly features and `80/20` chronological split as the logistic model
-- Standardised features were passed into the model for consistency with the shared workflow
-- Key parameters:
-  - `n_estimators=300`
-  - `max_depth=6`
-  - `class_weight="balanced"`
-  - `random_state=42`
-- Feature importance was measured using impurity-based importance
+  - all features: 11 baseline + lag/delta terms = 29 total before L1 pruning
+  - walk-forward expanding window; same 245-month OOS period as Experiment 3
+- L1 pruning reduced from 29 to 17 features
+
+**Features retained after L1 pruning (17):**
+`SPX_MACD`, `Unemployment_Delta3M`, `Fed_Funds_Rate_Lag12M`, `VIX_Close`, `10Y2Y_Spread_Delta12M`, `10Y2Y_Spread_Lag6M`, `Unemployment_Delta12M`, `SPX_Volume`, `Fed_Funds_Rate_Lag6M`, `Inflation_Delta6M`, `Inflation`, `Real_GDP`, `Unemployment_Delta6M`, `10Y2Y_Spread_Delta6M`, `SPX_ROC`, `Unemployment`, `SPX_RSI`
 
 ### Output / Figure
 
-Outputs include test accuracy, classification report, confusion matrix, and ranked feature-importance bars.
-
-![rf_feature_importance](./figures/rf_feature_importance.png)
-
-Additional outcome reading:
-
-- The random-forest importance chart is best read as a ranking of non-linear predictive usefulness.
-- The reported top five features are:
-  - `SPX_RSI` (**0.2339**)
-  - `SPX_ROC` (**0.1848**)
-  - `SPX_MACDH` (**0.1321**)
-  - `SPX_MACD` (**0.0936**)
-  - `VIX_Close` (**0.0774**)
-- `Fed_Funds_Rate` ranks **#11 / 12**, which places it near the bottom of the baseline tree-model ranking.
-- This means the forest relies much more heavily on momentum and volatility signals than on the current policy rate when classifying bull and bear states.
-
-### Interpretation
-
-Random forest captures non-linear interactions and typically ranked technical indicators above the raw Fed rate. This supports the view that market-state variables carry more immediate signal for regime detection.
-
-## 10. Gradient Boosting
-
-### Definition
-
-Gradient boosting builds trees sequentially, with each new tree correcting the errors of the previous ensemble.
-
-It is well suited to structured tabular data and can uncover non-linear relationships with strong predictive performance.
-
-### Methodology
-
-- Data used:
-  - the same monthly baseline classification dataset
-  - the 12 predictor features used across the shared model comparison
-  - chronologically split train and test sets
-- Used the same monthly feature matrix and chronological `80/20` split
-- Trained on standardised features within the shared modelling pipeline
-- Key parameters:
-  - `n_estimators=200`
-  - `max_depth=4`
-  - `random_state=42`
-- Feature importance was extracted from the fitted boosting model
-
-### Output / Figure
-
-Outputs include test accuracy, classification report, confusion matrix, and a ranked importance chart.
-
-![gb_feature_importance](./figures/gb_feature_importance.png)
-
-Additional outcome reading:
-
-- The gradient-boosting importance figure plays a similar role to the random-forest chart, but it reflects a sequential tree ensemble rather than a bagged one.
-- In the baseline results, Gradient Boosting achieved **80.95%** accuracy and ranked `Fed_Funds_Rate` only **#10 / 12**.
-- The strongest features again come from technical momentum variables, especially `SPX_RSI` and related market-state indicators.
-- Because both major tree-based models push the raw Fed rate toward the bottom of the ranking, the outcome suggests that this conclusion is stable across different non-linear modelling frameworks.
-
-### Interpretation
-
-Gradient boosting offered a stronger non-linear benchmark and again showed that immediate market indicators were more informative than the raw policy rate. It is useful as evidence that the main conclusion is not model-specific.
-
-## 11. Re-modelling after L1 Pruning
-
-### Definition
-
-Re-modelling after L1 pruning means retraining predictive models on a reduced feature set selected by an L1-penalised logistic regression.
-
-In data science, this is useful when lagged and engineered predictors create a larger and more collinear feature space. The pruning step keeps only the strongest signals, and the re-modelling step tests whether those retained variables improve interpretability and predictive value.
-
-### Methodology
-
-- Data used:
-  - the expanded monthly lag/delta feature set
-  - L1-selected features from the advanced engineering stage
-  - re-trained random forest and gradient boosting models on the pruned dataset
-- In the project's advanced feature-engineering stage, monthly lag and delta terms were added for macro and Fed variables.
-- Reported engineered examples included:
-  - `Fed_Funds_Rate_Lag3M`
-  - `Fed_Funds_Rate_Lag6M`
-  - `Fed_Funds_Rate_Delta3M`
-  - `Fed_Funds_Rate_Delta6M`
-- An L1-penalised logistic regression was then used to prune weak predictors before re-training tree-based models.
-- According to the project progress report:
-  - the feature set was reduced from `23` to `11`
-  - random forest was retrained on the pruned data
-  - gradient boosting was retrained on the pruned data
-  - reported pruned-data accuracy was approximately `78.85%` for random forest and `84.62%` for gradient boosting
-
-### Output / Figure
-
-Expected outputs are the subset of retained features, updated feature rankings, and revised test performance after pruning.
+Expected outputs: updated walk-forward performance and revised feature importance confirming or overturning Experiment 3 findings.
 
 ![remodelling_after_l1_pruning](./figures/remodelling_after_l1_pruning.png)
 
-Additional outcome reading:
+**Results (Walk-Forward, Full Features, Pruned):**
 
-- The main result after L1 pruning is not just dimensionality reduction, but a change in **which Fed variables survive**.
-- The feature set was reduced from **23** to **11** variables.
-- Only two Fed-engineered features survived the penalty:
-  - `Fed_Funds_Rate_Lag3M`
-  - `Fed_Funds_Rate_Delta6M`
-- These retained features became materially more important than the raw current rate:
-  - `Fed_Funds_Rate_Lag3M` ranked strongly in Gradient Boosting, including **#3**
-  - `Fed_Funds_Rate_Delta6M` ranked strongly in Random Forest, including **#3**, and reached **#5** in Logistic Regression
-- Reported post-pruning accuracy was about **78.85%** for Random Forest and **84.62%** for Gradient Boosting.
-- The outcome means that once the model is allowed to represent delayed and cumulative policy effects, the Fed signal becomes more meaningful than in the raw baseline feature set.
+| Model | Accuracy | Bear Precision | Bear Recall | Bear F1 |
+|---|---|---|---|---|
+| Random Forest | **89%** | 0.43 | 0.38 | 0.40 |
+| Gradient Boosting | **89%** | 0.43 | 0.38 | 0.40 |
+
+**`Fed_Funds_Rate` best lag/delta indicator average rank:** **4.3 / 29** (across LR, RF, GB)
+
+- Logistic Regression: #6 / 29
+- Random Forest: #4 / 17
+- Gradient Boosting: #3 / 17
 
 ### Interpretation
 
-L1 pruning changed the conclusion from "the raw Fed rate is weak" to a more precise result: delayed and momentum-based Fed features matter more than the contemporaneous rate level. In the reported results, `Fed_Funds_Rate_Lag3M` and `Fed_Funds_Rate_Delta6M` survived pruning and became more informative than the raw current rate.
+When technical indicators are reintroduced, overall accuracy rebounds to 89%, but this partly reflects the market-state information embedded in RSI and ROC. Importantly, `Fed_Funds_Rate_Lag12M` and `Fed_Funds_Rate_Delta12M` both survive the L1 penalty and remain in the top-5 for tree models. This means that even when competing against technical momentum, the delayed Fed rate signal carries independent predictive value — confirming that the 12-month lagged policy effect is robust rather than a statistical artefact of the macro-only setting.
 
 ---
 
@@ -693,21 +670,26 @@ L1 pruning changed the conclusion from "the raw Fed rate is weak" to a more prec
 ## How the Dataset Is Built
 
 - Raw market, macroeconomic, and policy data are aligned to monthly frequency
-- Missing values are handled through forward-fill and row filtering after feature construction
-- Technical, lagged, and policy-cycle features are engineered
+- Non-stationary features are transformed (percentage change, first difference) before modelling
+- Four features are removed: `SPX_Close` (leakage), `SPX_MACDS` (redundant), `Fed_Funds_Future` (near-perfect collinearity), `10Y_Treasury_Future` (missing data)
+- Lag and delta features are engineered to capture delayed and cumulative policy effects
 - A bull/bear target is created from S&P 500 price movements using the 20% rule
 
 ## How the Models Work Together
 
-- **Correlation and lead-lag methods** screen for descriptive relationships
-- **Conditional Granger causality** tests whether Fed variables add explanatory value after controls
-- **Event study** checks whether hike-cycle starts coincide with future bear-market onset
-- **Network analysis** shows the structural proximity of each variable to the regime label
-- **Classification models** measure predictive usefulness directly
-- **L1 regularization** identifies whether engineered lag/delta policy features contain signal that the raw rate misses
+- **Correlation and lead-lag methods** screen for descriptive relationships and show near-zero raw correlation between `Fed_Funds_Rate` and regime
+- **Conditional Granger causality** tests whether Fed variables add explanatory value after controls; most do not
+- **Event study** checks whether hike-cycle starts coincide with future bear-market onset; they do not
+- **Network analysis** shows `Fed_Funds_Rate` as the least connected node relative to the regime label
+- **Experiment 1** establishes that the contemporaneous Fed rate ranks last or near last in baseline classifiers
+- **Experiment 2** shows that 6–12 month lagged Fed features are more informative than the current rate
+- **Experiment 3** identifies `Fed_Funds_Rate_Delta12M` as the top macro predictor, but macro-only timing is poor
+- **Experiment 4** confirms the lagged Fed signal survives even when technical indicators are reintroduced
 
 ## Main Conclusion
 
 Across descriptive, causal, structural, and predictive analyses, the project consistently finds that Fed rate hikes are **not the main immediate trigger** of S&P 500 bear regimes.
 
-The strongest short-horizon signals come from market momentum and volatility features such as `RSI`, `ROC`, `MACD` components, and `VIX`. Fed-related information becomes more relevant only after additional lag and delta engineering, which suggests that monetary policy effects are more **delayed and cumulative** than immediate.
+The strongest short-horizon signals come from market momentum and volatility features such as `SPX_RSI`, `SPX_ROC`, `SPX_MACDH`, and `VIX_Close`. The raw Fed Funds Rate has near-zero correlation with regime and ranks last (11/11) in the baseline logistic regression.
+
+However, the project reveals a more nuanced picture: **it is the shock of rapid hiking**, captured by `Fed_Funds_Rate_Delta12M`, rather than the rate level, that carries the most meaningful macro signal. This effect operates with a **6–12 month delay** and is most visible when technical indicators are removed. Macro-only models can identify economically fragile conditions but cannot time the exact regime flip, because market sentiment shifts faster than the macroeconomic data that captures the policy transmission.
