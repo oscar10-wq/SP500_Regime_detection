@@ -2,6 +2,17 @@
 
 This document explains how the project dataset is constructed and how each analysis method is used to test whether Federal Reserve rate hikes are the main trigger of S&P 500 bull-to-bear regime switches.
 
+## Source Basis
+
+This document is primarily organised from `SP500_Regime_detection/project_corrected_data.ipynb`, which is the notebook version that has already been checked and validated by the group.
+
+
+## Presentation Notes
+
+Total presentation time: 10 minutes  
+Estimated speaking time per slide: 1–2 minutes  
+Expected number of content slides (excluding the table of contents and section cover slides): 8–12 slides
+
 ## Dataset Overview
 
 - **Sample period:** January 2000 to January 2026
